@@ -131,7 +131,7 @@ sm.OLS.from_formula('medv~np.log(rm)',boston).fit().summary()
 #QUALITATIVE PREDICTORS
 
 #importing carseats dataset
-carseats=pd.read_csv(r"/Users/kanishkagarwal/Downloads/ISL_python-master/data/Carseats.csv")
+carseats=pd.read_csv("Carseats.csv")
 carseats.columns
 
 #we fit a multiple regression model that includes some interaction terms
