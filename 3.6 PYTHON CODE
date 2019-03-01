@@ -5,3 +5,140 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 %matplotlib inline
 
+#Importing datasets
+boston=pd.read_csv("Boston.csv")
+#showing the dataset
+boston
+boston.columns
+#dimensions
+boston.shape
+
+#LINEAR REGRESSION
+
+#predictor--->lstat
+#response--->medv
+y=boston['medv']
+X=boston['lstat']
+
+#making a model using statsmodels
+import statsmodels.api as sm
+X=sm.add_constant(X)
+lm=sm.OLS(y,X).fit()
+
+#printing slope(m) and constant(c) in y=mx+c
+lm.params
+print(lm.summary())
+#confidence interval
+ci=lm.conf_int()
+ci
+#predicting y for some x_test
+X_test=pd.DataFrame(data=[5,10,15],columns=['lstat'])
+X_test=sm.add_constant(X_test)
+y_test=lm.predict(X_test)
+#prediction and confidence intervals
+ci_new=X_test.dot(ci)
+ci_new=ci_new.rename(columns={0: 'lwr', 1: 'upr'})
+ci_new
+#making y_test a dataframe
+y_test=pd.DataFrame(data=y_test,columns=['fit'])
+y_test
+#printing prediction intervals
+pred_ci=pd.concat([y_test,ci_new],axis=1)
+pred_ci
+
+#plots
+plt.figure(figsize=(24,8))
+plt.figure(1)
+plt.subplot(221)
+plt.title("lr model")
+sns.regplot('lstat','medv',boston,line_kws={"color":"r"},ci=None)
+plt.subplot(222)
+plt.title("fitted_values vs. residuals")
+fitted_values = pd.Series(lm.fittedvalues, name="Fitted Values")
+residuals = pd.Series(lm.resid, name="Residuals")
+sns.regplot(fitted_values, residuals, fit_reg=False)
+plt.figure(figsize=(24,8))
+plt.figure(2)
+plt.subplot(221)
+plt.title("fitted_values vs studentized_residuals")
+studentized_residuals = pd.Series(lm.resid_pearson, name="Studentized_Residuals")
+sns.regplot(fitted_values, studentized_residuals,  fit_reg=False)
+plt.subplot(222)
+plt.title("leverage vs studentized_residuals")
+from statsmodels.stats.outliers_influence import OLSInfluence
+leverage = pd.Series(OLSInfluence(lm).influence, name = "Leverage")
+sns.regplot(leverage, studentized_residuals,  fit_reg=False)
+plt.show()
+
+#MULTIPLE REGRESSION
+
+#training set
+Xml=boston[['lstat','age']]
+yml=boston['medv']
+
+#making a model on the training set
+Xml=sm.add_constant(Xml)
+lm_1=sm.OLS(yml,Xml).fit()
+print(lm_1.summary())
+lm_2=sm.OLS.from_formula('medv~'+'+'.join(boston.columns.difference(["medv"])),boston).fit()
+print(lm_2.summary())
+lm_3=sm.OLS.from_formula('medv~'+'+'.join(boston.columns.difference(["medv","age"])),boston).fit()
+print(lm_3.summary())
+
+#INTERACTION TERMS
+
+print(sm.OLS.from_formula('medv ~ lstat*age',boston).fit().summary())
+
+#NON-LINEAR TRANSFORMATION OF PREDICTORS
+
+#I(X^2)
+lm.fit2=sm.OLS.from_formula('medv~lstat+np.square(lstat)',boston).fit()
+print(lm.fit2.summary())
+#We use the anova() function to further quantify the extent to which the quadratic fit is superior to the linear fit.
+lm.fit=sm.OLS.from_formula('medv~lstat',boston).fit()
+print(sm.stats.anova_lm(lm.fit,lm.fit2))
+#plots
+plt.figure(figsize=(24,8))
+plt.figure(1)
+plt.subplot(221)
+plt.title("lr model")
+sns.regplot('lstat','medv',boston,line_kws={"color":"r"},ci=None)
+plt.subplot(222)
+plt.title("fitted_values vs. residuals")
+fitted_values = pd.Series(lm.fit2.fittedvalues,name="Fitted Values")
+residuals = pd.Series(lm.fit2.resid,name="Residuals")
+sns.regplot(fitted_values,residuals,fit_reg=False)
+plt.figure(figsize=(24,8))
+plt.figure(2)
+plt.subplot(221)
+plt.title("fitted_values vs studentized_residuals")
+studentized_residuals = pd.Series(lm.fit2.resid_pearson, name="Studentized_Residuals")
+sns.regplot(fitted_values,studentized_residuals,fit_reg=False)
+plt.subplot(222)
+plt.title("leverage vs studentized_residuals")
+from statsmodels.stats.outliers_influence import OLSInfluence
+leverage = pd.Series(OLSInfluence(lm.fit2).influence,name = "Leverage")
+sns.regplot(leverage, studentized_residuals,fit_reg=False)
+plt.show()
+
+#I(X^5)
+lm.fit5=sm.OLS.from_formula('medv~'+'+'.join(['np.power(lstat,'+str(i)+')'for i in range(1,6)]),boston).fit()
+print(lm.fit5.summary())
+
+#Log(rm)
+sm.OLS.from_formula('medv~np.log(rm)',boston).fit().summary()
+
+#QUALITATIVE PREDICTORS
+
+#importing carseats dataset
+carseats=pd.read_csv(r"/Users/kanishkagarwal/Downloads/ISL_python-master/data/Carseats.csv")
+carseats.columns
+
+#we fit a multiple regression model that includes some interaction terms
+lmm=sm.OLS.from_formula('Sales~Income:Advertising+Price:Age+'+"+".join(carseats.columns.difference(['Sales'])),carseats).fit()
+print(lmm.summary())
+
+#getting dummies of ShelveLoc
+dummies=pd.get_dummies(carseats.ShelveLoc,prefix='ShelveLoc').iloc[:,1:]
+#Python has created a ShelveLocGood dummy variable that takes on a value of 1 if the shelving location is good, and 0 otherwise. It has also created a ShelveLocMedium dummy variable that equals 1 if the shelving location is medium, and 0 otherwise.
+pd.concat([carseats['ShelveLoc'],dummies],axis=1)
